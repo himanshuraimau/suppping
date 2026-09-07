@@ -1,0 +1,19 @@
+{
+  "name": "api",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "build": "bun build src/index.ts --outdir dist --target bun",
+    "start": "bun run dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@suppping/shared-types": "workspace:*",
+    "hono": "^4.13.7"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/bun": "latest",
+    "typescript": "^7.0.2"
+  }
+}
