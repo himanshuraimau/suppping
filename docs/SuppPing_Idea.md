@@ -1,5 +1,7 @@
 # SuppPing — Product Idea & Technical Blueprint
 
+> For backend implementation, see [Backend_Architecture.md](Backend_Architecture.md) — it resolves this doc's open technical questions (LLM choice, WhatsApp provider, queue/data design, package structure) into concrete decisions and is the doc to build against.
+
 ## 1. Product Overview
 
 **SuppPing** is a personal AI assistant that lives inside WhatsApp.
