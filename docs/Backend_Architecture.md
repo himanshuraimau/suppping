@@ -8,7 +8,7 @@ We are explicitly building our MVP feature set to match **[Poko](https://www.pok
 
 | Open question in the idea doc | Decision |
 |---|---|
-| "LLM/API" (unspecified) | Anthropic Claude via tool calling. Haiku for intent classification/entity extraction (cheap, fast, high volume); Sonnet as fallback when Haiku's confidence is low or the request is multi-step/ambiguous. |
+| "LLM/API" (unspecified) | **Vercel AI SDK** (`ai` package) as the orchestration layer, with **Google Gemini** (`@ai-sdk/google`) as the model provider for now. The AI SDK's `generateText`/`tool()` calling is provider-agnostic, so swapping Gemini for another model later is a provider-import change, not a rewrite of the tool contract in §3. |
 | WhatsApp integration (generic) | **Meta WhatsApp Cloud API** direct (not a BSP like Twilio/Gupshup) — no per-message markup, official, sufficient for MVP volume. |
 | "Fastify or Hono" | Hono — already the choice made in `apps/api`. No reason to reopen it. |
 | `packages/db`, `packages/validation`, `packages/config`, `packages/shared` (idea doc §15) | **Skip this split for now.** One extra package per concern is premature for a two-app MVP. Keep `packages/shared-types` (rename in spirit to "shared" if it starts holding Zod schemas too) and put DB/config code directly in the apps that own it. Split out a package only when `apps/worker` and `apps/api` actually duplicate real logic — not preemptively. |
@@ -65,7 +65,7 @@ Notes, daily summaries, habit tracking, location-based reminders, email workflow
 
 ## 3. AI tool contract
 
-The LLM is only ever allowed to emit one of these calls (each backed by a Zod schema the backend validates before touching Postgres):
+Defined with the AI SDK's `tool()` helper (Zod schema + `execute`), passed to `generateText`. The LLM is only ever allowed to emit one of these calls, each validated before touching Postgres:
 
 ```
 create_reminder(title, datetime, timezone, recurrence_rule?)
@@ -93,7 +93,7 @@ Flow for every message: `Understand → Validate → Act → Remember → Notify
 - `reminder_recipients` (v1.1) — `reminder_id, recipient_user_id, status (pending|accepted|declined)` for cross-person reminders.
 - `ai_audit_log` — `id, user_id, message_id, tool_called, tool_input, tool_result, created_at` — every tool call, for debugging and abuse review.
 
-## 5. Queues (`apps/worker`, doesn't exist in code yet)
+## 5. Queues (`apps/worker`)
 
 - `reminder-scheduling` — one delayed job per upcoming occurrence, keyed `reminder:{id}:{scheduled_at}`. On fire: check quiet hours, enqueue `outbound-messages`, and if recurring, schedule the next occurrence.
 - `outbound-messages` — actual WhatsApp Send API calls, retried with exponential backoff on failure, independent of scheduling.
@@ -103,7 +103,7 @@ Flow for every message: `Understand → Validate → Act → Remember → Notify
 1. **Foundation** — Postgres + Drizzle + drizzle-kit, `apps/worker` scaffold, env validation (Zod at boot, no `packages/config`), pino logging.
 2. **WhatsApp MVP** — Meta Cloud API webhook in `apps/api`, inbound dedup, `users`/`conversations`/`messages` tables, echo-back "got it" replies (no AI yet).
 3. **Reminders** — the tool contract for reminders, `reminder-scheduling`/`outbound-messages` queues, RRULE-based recurrence.
-4. **AI orchestration** — Claude tool-calling wired to the reminder tools, multi-turn clarification, `ai_audit_log`.
+4. **AI orchestration** — Gemini tool-calling via the AI SDK wired to the reminder tools, multi-turn clarification, `ai_audit_log`.
 5. **Tasks** — same pattern as reminders, no scheduling needed.
 6. **Calendar** — Google OAuth, event tools, conflict detection.
 7. **Quiet hours + cross-person reminders** — v1.1 Poko-parity features.
@@ -111,4 +111,4 @@ Flow for every message: `Understand → Validate → Act → Remember → Notify
 
 ## 7. Working convention while implementing this
 
-Use the **ponytail** skill for every piece of backend code written against this plan — the simplest thing that actually works, standard library and the chosen deps (Hono, Drizzle, BullMQ, Zod, rrule) over new dependencies, no speculative abstractions for "Later" features. If a step above tempts you toward a package split, an abstraction layer, or a config system before something real needs it, that's the signal to not build it yet.
+Use the **ponytail** skill for every piece of backend code written against this plan — the simplest thing that actually works, standard library and the chosen deps (Hono, Drizzle, BullMQ, Zod, rrule, AI SDK) over new dependencies, no speculative abstractions for "Later" features. If a step above tempts you toward a package split, an abstraction layer, or a config system before something real needs it, that's the signal to not build it yet.

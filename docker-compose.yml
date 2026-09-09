@@ -1,0 +1,18 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: suppping
+      POSTGRES_PASSWORD: suppping
+      POSTGRES_DB: suppping
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+# No redis service here — use a local Redis on localhost:6379 (matches
+# apps/worker/.env.example). Add one back if this environment doesn't have it.
+
+volumes:
+  postgres-data:
